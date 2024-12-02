@@ -48,13 +48,12 @@ router.get('/api/entry/:id', isAuthenticated, async (req, res) => {
 
 // Create a new entry
 router.post('/api/create', isAuthenticated, async (req, res) => {
-  const { service_product, quantity, rate, description } = req.body;
+  const { service_product, quantity, rate, description } = req.body; // No price
   try {
-    const price = rate * quantity; // Calculate price dynamically
     console.log('Creating entry for userId:', req.session.userId);
     await pool.query(
-      'INSERT INTO billing_entries (user_id, service_product, quantity, rate, price, description) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.session.userId, service_product, quantity, rate, price, description]
+      'INSERT INTO billing_entries (user_id, service_product, quantity, rate, description) VALUES (?, ?, ?, ?, ?)', // No price
+      [req.session.userId, service_product, quantity, rate, description] // No price
     );
     console.log('Entry created successfully');
     res.redirect('/dashboard');
@@ -66,13 +65,12 @@ router.post('/api/create', isAuthenticated, async (req, res) => {
 
 // Update an entry
 router.post('/api/edit', isAuthenticated, async (req, res) => {
-  const { id, service_product, quantity, rate, description } = req.body;
+  const { id, service_product, quantity, rate, description } = req.body; // No price
   try {
-    const price = rate * quantity; // Calculate price dynamically
     console.log(`Updating entry with ID: ${id}`);
     await pool.query(
-      'UPDATE billing_entries SET service_product = ?, quantity = ?, rate = ?, price = ?, description = ? WHERE id = ? AND user_id = ?',
-      [service_product, quantity, rate, price, description, id, req.session.userId]
+      'UPDATE billing_entries SET service_product = ?, quantity = ?, rate = ?, description = ? WHERE id = ? AND user_id = ?', // No price
+      [service_product, quantity, rate, description, id, req.session.userId] // No price
     );
     console.log('Entry updated successfully');
     res.redirect('/dashboard');

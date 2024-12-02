@@ -144,6 +144,16 @@ app.get('/logout', (req, res) => {
   });
 });
 
+app.get('/edit', (req, res) => {
+  if (!req.session.userId) {
+    console.log('Unauthorized access to edit page. Redirecting to login.');
+    return res.redirect('/login');
+  }
+  console.log(`Serving edit.html for userId: ${req.session.userId}`);
+  res.sendFile(path.join(__dirname, 'public/edit.html'));
+});
+
+
 // Start server
 const PORT = 3000;
 app.listen(PORT, () => {
