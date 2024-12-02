@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Entry</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <h1>Create New Billing Entry</h1>
+  <a href="/dashboard">Back to Dashboard</a>
+  <form action="/api/create" method="POST">
+    <label for="service_product">Service/Product:</label>
+    <input type="text" name="service_product" id="service_product" required>
+
+    <label for="quantity">Quantity:</label>
+    <input type="number" name="quantity" id="quantity" required>
+
+    <label for="rate">Rate:</label>
+    <input type="number" name="rate" id="rate" step="0.01" required>
+
+    <label for="description">Description:</label>
+    <textarea name="description" id="description"></textarea>
+
+    <button type="submit">Create Entry</button>
+  </form>
+</body>
+</html>
