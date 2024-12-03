@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Dashboard</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <h1>Welcome, <span id="username">Loading...</span>!</h1>
+  <a href="/logout">Logout</a>
+
+  <h2>Your Billing Entries</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Service/Product</th>
+        <th>Quantity</th>
+        <th>Rate</th>
+        <th>Total Price</th>
+        <th>Description</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="entries">
+      <!-- Billing entries will be dynamically injected -->
+      <tr>
+        <td colspan="6">Loading entries...</td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <script>
+    console.log('Client Dashboard script starting...');
+    
+    // Function to display error messages on the page
+    function showError(message) {
+      const entriesTable = document.getElementById('entries');
+      entriesTable.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${message}</td></tr>`;
+    }
+
+    console.log('Making fetch request to /api/entries...');
+    fetch('/api/entries')
+      .then(response => {
+        console.log('Response received:', response);
+        console.log('Response status:', response.status);
+        console.log('Response headers:', [...response.headers.entries()]);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Data received:', data);
+        const entriesTable = document.getElementById('entries');
+        const username = document.getElementById('username');
+        
+        console.log('Setting username:', data.username);
+        username.textContent = data.username || 'No username found';
+
+        if (!data.entries || !Array.isArray(data.entries)) {
+          console.error('Invalid entries data:', data.entries);
+          showError('Invalid data received from server');
+          return;
+        }
+
+        console.log('Number of entries:', data.entries.length);
+        
+        if (data.entries.length === 0) {
+          entriesTable.innerHTML = '<tr><td colspan="6">No entries found</td></tr>';
+          return;
+        }
+
+        entriesTable.innerHTML = ''; // Clear loading message
+        
+        data.entries.forEach((entry, index) => {
+          console.log(`Processing entry ${index}:`, entry);
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${entry.service_product || 'N/A'}</td>
+            <td>${entry.quantity || 'N/A'}</td>
+            <td>${entry.rate || 'N/A'}</td>
+            <td>${entry.price || 'N/A'}</td>
+            <td>${entry.description || 'N/A'}</td>
+            <td>
+              <button onclick="handlePay(${entry.id})">Pay</button>
+            </td>
+          `;
+          entriesTable.appendChild(row);
+        });
+      })
+      .catch(error => {
+        console.error('Fetch error:', error);
+        showError(error.message);
+      });
+
+    // Placeholder function for "Pay" button functionality
+    function handlePay(entryId) {
+      console.log(`Pay button clicked for entry ID: ${entryId}`);
+      // Add functionality here to handle payments (e.g., redirect to a payment page or initiate payment API)
+      alert(`Payment initiated for entry ID: ${entryId}`);
+    }
+  </script>
+</body>
+</html>

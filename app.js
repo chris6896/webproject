@@ -68,13 +68,18 @@ app.get('/signup', (req, res) => {
 });
 
 app.post('/api/signup', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, role } = req.body; // Extract role from the form
 
   try {
+    // Validate role
+    if (!['business', 'client'].includes(role)) {
+      return res.status(400).send('Invalid role selected.');
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const query = 'INSERT INTO users (username, password) VALUES (?, ?)';
-    await pool.query(query, [username, hashedPassword]);
-    console.log(`User ${username} signed up successfully`);
+    const query = 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)';
+    await pool.query(query, [username, hashedPassword, role]); // Include role in query
+    console.log(`User ${username} signed up successfully as ${role}`);
     res.redirect('/login');
   } catch (error) {
     console.error('Error during signup:', error);
@@ -108,10 +113,17 @@ app.post('/api/login', async (req, res) => {
 
     req.session.userId = user.id;
     req.session.username = user.username;
+    req.session.role = user.role; // Store role in session
 
     console.log('Session after login:', req.session); // Debug session
-    console.log(`User ${username} logged in successfully`);
-    res.redirect('/dashboard');
+    console.log(`User ${username} logged in successfully as ${user.role}`);
+    
+    // Redirect based on role
+    if (user.role === 'business') {
+      res.redirect('/dashboard'); // Redirect to dashboard.html for business users
+    } else {
+      res.redirect('/client-dashboard'); // Redirect to client dashboard for client users
+    }
   } catch (error) {
     console.error('Error during login:', error);
     res.status(500).send('Error logging in.');
@@ -125,6 +137,15 @@ app.get('/dashboard', (req, res) => {
   }
   console.log(`Serving dashboard.html for userId: ${req.session.userId}`);
   res.sendFile(path.join(__dirname, 'public/dashboard.html'));
+});
+
+app.get('/client-dashboard', (req, res) => {
+  if (req.session.role !== 'client') {
+    console.log('Unauthorized access to client dashboard. Redirecting to login.');
+    return res.redirect('/login');
+  }
+  console.log(`Serving client-dashboard.html for userId: ${req.session.userId}`);
+  res.sendFile(path.join(__dirname, 'public/client-dashboard.html'));
 });
 
 app.get('/create', (req, res) => {
@@ -152,7 +173,6 @@ app.get('/edit', (req, res) => {
   console.log(`Serving edit.html for userId: ${req.session.userId}`);
   res.sendFile(path.join(__dirname, 'public/edit.html'));
 });
-
 
 // Start server
 const PORT = 3000;
