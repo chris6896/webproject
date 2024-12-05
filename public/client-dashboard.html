@@ -23,7 +23,6 @@
       </tr>
     </thead>
     <tbody id="entries">
-      <!-- Billing entries will be dynamically injected -->
       <tr>
         <td colspan="6">Loading entries...</td>
       </tr>
@@ -34,7 +33,8 @@
   <table>
     <thead>
       <tr>
-        <th>Invoice ID</th>
+        <th>Invoice #</th>
+        <th>Business</th>
         <th>Total Amount</th>
         <th>Due Date</th>
         <th>Status</th>
@@ -42,9 +42,8 @@
       </tr>
     </thead>
     <tbody id="client-invoices">
-      <!-- Assigned invoices will be dynamically injected -->
       <tr>
-        <td colspan="5">Loading invoices...</td>
+        <td colspan="6">Loading invoices...</td>
       </tr>
     </tbody>
   </table>
@@ -52,7 +51,6 @@
   <script>
     console.log('Client Dashboard script starting...');
     
-    // Function to display error messages on the page
     function showError(tableId, message) {
       const table = document.getElementById(tableId);
       table.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${message}</td></tr>`;
@@ -82,7 +80,7 @@
           return;
         }
 
-        entriesTable.innerHTML = ''; // Clear loading message
+        entriesTable.innerHTML = '';
         
         data.entries.forEach(entry => {
           const row = document.createElement('tr');
@@ -121,22 +119,24 @@
         }
 
         if (data.invoices.length === 0) {
-          invoicesTable.innerHTML = '<tr><td colspan="5">No invoices found</td></tr>';
+          invoicesTable.innerHTML = '<tr><td colspan="6">No invoices found</td></tr>';
           return;
         }
 
-        invoicesTable.innerHTML = ''; // Clear loading message
+        invoicesTable.innerHTML = '';
         
         data.invoices.forEach(invoice => {
+          const dueDate = new Date(invoice.due_date).toLocaleDateString();
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td>${invoice.id}</td>
-            <td>${invoice.total_amount}</td>
-            <td>${invoice.due_date}</td>
-            <td>${invoice.status}</td>
+            <td>${invoice.invoice_number || invoice.id}</td>
+            <td>${invoice.business_name || 'N/A'}</td>
+            <td>$${parseFloat(invoice.total_amount).toFixed(2)}</td>
+            <td>${dueDate}</td>
+            <td>${invoice.status || 'unpaid'}</td>
             <td>
-              <button onclick="handleInvoice(${invoice.id})">View</button>
-              <button onclick="handlePay(${invoice.id})">Pay</button>
+              <a href="/invoices/${invoice.user_id}/${invoice.client_id}/${invoice.pdf_path}" target="_blank" class="button">View PDF</a>
+              ${invoice.status !== 'paid' ? `<button onclick="handlePay(${invoice.id})">Pay</button>` : ''}
             </td>
           `;
           invoicesTable.appendChild(row);

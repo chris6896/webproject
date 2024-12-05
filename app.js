@@ -3,10 +3,11 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const path = require('path');
 const bcrypt = require('bcryptjs');
-const MySQLStore = require('express-mysql-session')(session); // Add MySQL session store
-const pool = require('./database'); // Database connection
+const fs = require('fs');
+const MySQLStore = require('express-mysql-session')(session);
+const pool = require('./database');
 const billingRoutes = require('./routes/billingRoutes');
-const invoiceRoutes = require('./routes/invoiceRoutes'); // New route for invoice functionality
+const invoiceRoutes = require('./routes/invoiceRoutes');
 
 const app = express();
 
@@ -14,6 +15,14 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Secure static file serving for invoices - requires authentication
+app.use('/invoices', (req, res, next) => {
+  if (!req.session.userId) {
+    return res.status(401).send('Unauthorized');
+  }
+  next();
+}, express.static(path.join(__dirname, 'invoices')));
 
 // Session Store Configuration
 const sessionStore = new MySQLStore({
@@ -46,13 +55,13 @@ app.use(
 
 // Debugging Middleware to Log Session Data
 app.use((req, res, next) => {
-  console.log('Session data:', req.session); // Logs session information for debugging
+  console.log('Session data:', req.session);
   next();
 });
 
 // Routes
 app.use(billingRoutes);
-app.use(invoiceRoutes); // Use the invoice routes
+app.use(invoiceRoutes);
 
 app.get('/', (req, res) => {
   console.log('Serving index.html');
@@ -70,17 +79,16 @@ app.get('/signup', (req, res) => {
 });
 
 app.post('/api/signup', async (req, res) => {
-  const { username, password, role } = req.body; // Extract role from the form
+  const { username, password, role } = req.body;
 
   try {
-    // Validate role
     if (!['business', 'client'].includes(role)) {
       return res.status(400).send('Invalid role selected.');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const query = 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)';
-    await pool.query(query, [username, hashedPassword, role]); // Include role in query
+    await pool.query(query, [username, hashedPassword, role]);
     console.log(`User ${username} signed up successfully as ${role}`);
     res.redirect('/login');
   } catch (error) {
@@ -115,16 +123,15 @@ app.post('/api/login', async (req, res) => {
 
     req.session.userId = user.id;
     req.session.username = user.username;
-    req.session.role = user.role; // Store role in session
+    req.session.role = user.role;
 
-    console.log('Session after login:', req.session); // Debug session
+    console.log('Session after login:', req.session);
     console.log(`User ${username} logged in successfully as ${user.role}`);
     
-    // Redirect based on role
     if (user.role === 'business') {
-      res.redirect('/dashboard'); // Redirect to dashboard.html for business users
+      res.redirect('/dashboard');
     } else {
-      res.redirect('/client-dashboard'); // Redirect to client dashboard for client users
+      res.redirect('/client-dashboard');
     }
   } catch (error) {
     console.error('Error during login:', error);
@@ -132,7 +139,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Access dashboard
 app.get('/dashboard', (req, res) => {
   if (!req.session.userId) {
     console.log('Unauthorized access to dashboard. Redirecting to login.');
@@ -142,7 +148,15 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/dashboard.html'));
 });
 
-// Access Client Page
+app.get('/generate-invoice', (req, res) => {
+  if (!req.session.userId) {
+    console.log('Unauthorized access to generate-invoice page. Redirecting to login.');
+    return res.redirect('/login');
+  }
+  console.log(`Serving generate-invoice.html for userId: ${req.session.userId}`);
+  res.sendFile(path.join(__dirname, 'public/generate-invoice.html'));
+});
+
 app.get('/client-dashboard', (req, res) => {
   if (req.session.role !== 'client') {
     console.log('Unauthorized access to client dashboard. Redirecting to login.');
@@ -152,7 +166,6 @@ app.get('/client-dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/client-dashboard.html'));
 });
 
-// Create function
 app.get('/create', (req, res) => {
   if (!req.session.userId) {
     console.log('Unauthorized access to create page. Redirecting to login.');
@@ -162,7 +175,6 @@ app.get('/create', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/create.html'));
 });
 
-// Logout Function
 app.get('/logout', (req, res) => {
   console.log(`Logging out userId: ${req.session.userId}`);
   req.session.destroy(() => {
@@ -171,7 +183,6 @@ app.get('/logout', (req, res) => {
   });
 });
 
-// Edit Function
 app.get('/edit', (req, res) => {
   if (!req.session.userId) {
     console.log('Unauthorized access to edit page. Redirecting to login.');
@@ -188,6 +199,44 @@ app.get('/view-invoice', (req, res) => {
   }
   console.log(`Serving view_invoice.html for userId: ${req.session.userId}`);
   res.sendFile(path.join(__dirname, 'public/view_invoice.html'));
+});
+
+// Secure route for serving invoice PDFs
+app.get('/api/invoices/:userId/:clientId/:filename', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).send('Unauthorized');
+  }
+
+  try {
+    const { userId, clientId, filename } = req.params;
+    
+    // Verify this user has access to this invoice
+    const [invoice] = await pool.query(
+      'SELECT * FROM invoices WHERE user_id = ? AND client_id = ? AND pdf_path = ?',
+      [userId, clientId, filename]
+    );
+
+    if (!invoice.length) {
+      return res.status(404).send('Invoice not found');
+    }
+
+    // Construct the full path to the PDF
+    const pdfPath = path.join(__dirname, 'invoices', userId, clientId, filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(pdfPath)) {
+      return res.status(404).send('PDF file not found');
+    }
+
+    // Set the content type and send the file
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    fs.createReadStream(pdfPath).pipe(res);
+
+  } catch (error) {
+    console.error('Error serving PDF:', error);
+    res.status(500).send('Error retrieving PDF');
+  }
 });
 
 // Start server

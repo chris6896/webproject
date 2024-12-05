@@ -11,7 +11,7 @@
   <a href="/logout">Logout</a>
 
   <h2>Your Billing Entries</h2>
-  <button id="generate-invoice">Generate Invoice</button>
+  <button id="generate-invoice" onclick="redirectToGenerateInvoice()">Generate Invoice</button>
   <table>
     <thead>
       <tr>
@@ -35,10 +35,10 @@
   <table>
     <thead>
       <tr>
-        <th>Invoice ID</th>
+        <th>Invoice #</th>
         <th>Client</th>
         <th>Total Amount</th>
-        <th>Due Date</th>
+        <th>Due Days</th>
         <th>Status</th>
         <th>Actions</th>
       </tr>
@@ -51,69 +51,77 @@
   </table>
 
   <script>
-    document.getElementById('generate-invoice').addEventListener('click', async () => {
-      const response = await fetch('/api/invoices/generate', { method: 'POST' });
-      if (response.ok) {
-        alert('Invoice generated successfully!');
-        loadInvoices();
-      } else {
-        alert('Failed to generate invoice.');
-      }
-    });
+    function redirectToGenerateInvoice() {
+      window.location.href = '/generate-invoice';
+    }
 
     async function loadEntries() {
-      const response = await fetch('/api/entries');
-      const data = await response.json();
-      const entriesTable = document.getElementById('entries');
+      try {
+        const response = await fetch('/api/entries');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-      if (!data.entries || data.entries.length === 0) {
-        entriesTable.innerHTML = '<tr><td colspan="6">No entries found</td></tr>';
-        return;
+        const data = await response.json();
+        const entriesTable = document.getElementById('entries');
+
+        if (!data.entries || data.entries.length === 0) {
+          entriesTable.innerHTML = '<tr><td colspan="6">No entries found</td></tr>';
+          return;
+        }
+
+        entriesTable.innerHTML = '';
+        data.entries.forEach(entry => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${entry.service_product || 'N/A'}</td>
+            <td>${entry.quantity || 'N/A'}</td>
+            <td>${entry.rate || 'N/A'}</td>
+            <td>${entry.price || 'N/A'}</td>
+            <td>${entry.description || 'N/A'}</td>
+            <td>
+              <a href="/edit?id=${entry.id}">Edit</a>
+              <a href="/api/delete/${entry.id}" onclick="return confirm('Delete Service?')">Delete</a>
+            </td>
+          `;
+          entriesTable.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Error loading entries:', err);
+        alert('Failed to load entries.');
       }
-
-      entriesTable.innerHTML = '';
-      data.entries.forEach(entry => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${entry.service_product || 'N/A'}</td>
-          <td>${entry.quantity || 'N/A'}</td>
-          <td>${entry.rate || 'N/A'}</td>
-          <td>${entry.price || 'N/A'}</td>
-          <td>${entry.description || 'N/A'}</td>
-          <td>
-            <a href="/edit?id=${entry.id}">Edit</a>
-            <a href="/api/delete/${entry.id}" onclick="return confirm('Delete Service?')">Delete</a>
-          </td>
-        `;
-        entriesTable.appendChild(row);
-      });
     }
 
     async function loadInvoices() {
-      const response = await fetch('/api/invoices');
-      const data = await response.json();
-      const invoicesTable = document.getElementById('invoices');
+      try {
+        const response = await fetch('/api/invoices');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-      if (!data.invoices || data.invoices.length === 0) {
-        invoicesTable.innerHTML = '<tr><td colspan="6">No invoices found</td></tr>';
-        return;
+        const data = await response.json();
+        const invoicesTable = document.getElementById('invoices');
+
+        if (!data.invoices || data.invoices.length === 0) {
+          invoicesTable.innerHTML = '<tr><td colspan="6">No invoices found</td></tr>';
+          return;
+        }
+
+        invoicesTable.innerHTML = '';
+        data.invoices.forEach(invoice => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${invoice.invoice_number}</td>
+            <td>${invoice.client_name || 'N/A'}</td>
+            <td>$${parseFloat(invoice.total_amount).toFixed(2)}</td>
+            <td>${invoice.due_days} days</td>
+            <td>${invoice.status || 'unpaid'}</td>
+            <td>
+              <a href="/invoices/${invoice.user_id}/${invoice.client_id}/${invoice.pdf_path}" target="_blank">View PDF</a>
+            </td>
+          `;
+          invoicesTable.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Error loading invoices:', err);
+        alert('Failed to load invoices.');
       }
-
-      invoicesTable.innerHTML = '';
-      data.invoices.forEach(invoice => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${invoice.id}</td>
-          <td>${invoice.client_name || 'N/A'}</td>
-          <td>${invoice.total_amount}</td>
-          <td>${invoice.due_date}</td>
-          <td>${invoice.status}</td>
-          <td>
-            <a href="/view-invoice?id=${invoice.id}">View</a>
-          </td>
-        `;
-        invoicesTable.appendChild(row);
-      });
     }
 
     document.addEventListener('DOMContentLoaded', () => {

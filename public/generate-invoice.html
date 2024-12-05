@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate Invoice</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <h1>Generate Invoice</h1>
+  <a href="/dashboard">Back to Dashboard</a>
+  <form id="generate-invoice-form">
+    <label for="client">Select Client:</label>
+    <select id="client" name="clientId" required>
+      <option value="">Loading clients...</option>
+    </select>
+
+    <label for="dueDays">Due Days:</label>
+    <input type="number" id="dueDays" name="dueDays" min="1" placeholder="Enter Due Days" required />
+
+    <label for="lineItems">Line Items:</label>
+    <div id="lineItems">
+      <div class="line-item">
+        <input type="text" name="description[]" placeholder="Description" required />
+        <input type="number" name="quantity[]" placeholder="Quantity" min="1" required />
+        <input type="number" name="rate[]" placeholder="Rate" step="0.01" required />
+        <span class="amount">Amount: $0.00</span>
+        <button type="button" class="remove-line-item">Remove</button>
+      </div>
+    </div>
+    <button type="button" id="addLineItem">+ Line Item</button>
+
+    <label for="notes">Notes:</label>
+    <textarea id="notes" name="notes" placeholder="Optional notes"></textarea>
+
+    <label for="terms">Terms:</label>
+    <textarea id="terms" name="terms" placeholder="Terms and conditions"></textarea>
+
+    <button type="submit">Generate Invoice</button>
+  </form>
+
+  <script>
+    // Load client list
+    async function loadClients() {
+      const clientDropdown = document.getElementById('client');
+      try {
+        const response = await fetch('/api/clients');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        
+        const data = await response.json();
+        clientDropdown.innerHTML = ''; // Clear previous options
+        if (!data.clients || data.clients.length === 0) {
+          clientDropdown.innerHTML = '<option value="">No clients available</option>';
+          return;
+        }
+        data.clients.forEach(client => {
+          const option = document.createElement('option');
+          option.value = client.id;
+          option.textContent = client.username;
+          clientDropdown.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading clients:', error);
+        clientDropdown.innerHTML = '<option value="">Error loading clients</option>';
+      }
+    }
+
+    // Add line item
+    document.getElementById('addLineItem').addEventListener('click', () => {
+      const lineItems = document.getElementById('lineItems');
+      const newItem = document.createElement('div');
+      newItem.className = 'line-item';
+      newItem.innerHTML = `
+        <input type="text" name="description[]" placeholder="Description" required />
+        <input type="number" name="quantity[]" placeholder="Quantity" min="1" required />
+        <input type="number" name="rate[]" placeholder="Rate" step="0.01" required />
+        <span class="amount">Amount: $0.00</span>
+        <button type="button" class="remove-line-item">Remove</button>
+      `;
+      newItem.querySelector('.remove-line-item').addEventListener('click', () => newItem.remove());
+      lineItems.appendChild(newItem);
+    });
+
+    // Handle form submission
+    document.getElementById('generate-invoice-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const formData = new FormData(event.target);
+      const payload = {
+        clientId: formData.get('clientId'),
+        dueDays: formData.get('dueDays'),
+        notes: formData.get('notes'),
+        terms: formData.get('terms'),
+        items: Array.from(document.querySelectorAll('.line-item')).map(item => ({
+          description: item.querySelector('input[name="description[]"]').value,
+          quantity: item.querySelector('input[name="quantity[]"]').value,
+          rate: item.querySelector('input[name="rate[]"]').value,
+        })),
+      };
+
+      try {
+        const response = await fetch('/api/generate-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          alert('Invoice generated successfully!');
+          window.location.href = '/dashboard';
+        } else {
+          const error = await response.text();
+          alert(`Failed to generate invoice: ${error}`);
+        }
+      } catch (error) {
+        console.error('Error generating invoice:', error);
+        alert('Failed to generate invoice.');
+      }
+    });
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', loadClients);
+  </script>
+</body>
+</html>
