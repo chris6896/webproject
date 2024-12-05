@@ -29,44 +29,54 @@
       </tr>
     </tbody>
   </table>
-  
+
+  <h2>Your Assigned Invoices</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Invoice ID</th>
+        <th>Total Amount</th>
+        <th>Due Date</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="client-invoices">
+      <!-- Assigned invoices will be dynamically injected -->
+      <tr>
+        <td colspan="5">Loading invoices...</td>
+      </tr>
+    </tbody>
+  </table>
+
   <script>
     console.log('Client Dashboard script starting...');
     
     // Function to display error messages on the page
-    function showError(message) {
-      const entriesTable = document.getElementById('entries');
-      entriesTable.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${message}</td></tr>`;
+    function showError(tableId, message) {
+      const table = document.getElementById(tableId);
+      table.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${message}</td></tr>`;
     }
 
     console.log('Making fetch request to /api/entries...');
     fetch('/api/entries')
       .then(response => {
-        console.log('Response received:', response);
-        console.log('Response status:', response.status);
-        console.log('Response headers:', [...response.headers.entries()]);
-        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.json();
       })
       .then(data => {
-        console.log('Data received:', data);
         const entriesTable = document.getElementById('entries');
         const username = document.getElementById('username');
         
-        console.log('Setting username:', data.username);
         username.textContent = data.username || 'No username found';
 
         if (!data.entries || !Array.isArray(data.entries)) {
-          console.error('Invalid entries data:', data.entries);
-          showError('Invalid data received from server');
+          showError('entries', 'Invalid data received from server');
           return;
         }
 
-        console.log('Number of entries:', data.entries.length);
-        
         if (data.entries.length === 0) {
           entriesTable.innerHTML = '<tr><td colspan="6">No entries found</td></tr>';
           return;
@@ -74,8 +84,7 @@
 
         entriesTable.innerHTML = ''; // Clear loading message
         
-        data.entries.forEach((entry, index) => {
-          console.log(`Processing entry ${index}:`, entry);
+        data.entries.forEach(entry => {
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${entry.service_product || 'N/A'}</td>
@@ -91,15 +100,61 @@
         });
       })
       .catch(error => {
-        console.error('Fetch error:', error);
-        showError(error.message);
+        console.error('Fetch error for entries:', error);
+        showError('entries', error.message);
       });
 
-    // Placeholder function for "Pay" button functionality
+    console.log('Making fetch request to /api/invoices/client...');
+    fetch('/api/invoices/client')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        const invoicesTable = document.getElementById('client-invoices');
+        
+        if (!data.invoices || !Array.isArray(data.invoices)) {
+          showError('client-invoices', 'Invalid data received from server');
+          return;
+        }
+
+        if (data.invoices.length === 0) {
+          invoicesTable.innerHTML = '<tr><td colspan="5">No invoices found</td></tr>';
+          return;
+        }
+
+        invoicesTable.innerHTML = ''; // Clear loading message
+        
+        data.invoices.forEach(invoice => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${invoice.id}</td>
+            <td>${invoice.total_amount}</td>
+            <td>${invoice.due_date}</td>
+            <td>${invoice.status}</td>
+            <td>
+              <button onclick="handleInvoice(${invoice.id})">View</button>
+              <button onclick="handlePay(${invoice.id})">Pay</button>
+            </td>
+          `;
+          invoicesTable.appendChild(row);
+        });
+      })
+      .catch(error => {
+        console.error('Fetch error for invoices:', error);
+        showError('client-invoices', error.message);
+      });
+
     function handlePay(entryId) {
       console.log(`Pay button clicked for entry ID: ${entryId}`);
-      // Add functionality here to handle payments (e.g., redirect to a payment page or initiate payment API)
       alert(`Payment initiated for entry ID: ${entryId}`);
+    }
+
+    function handleInvoice(invoiceId) {
+      console.log(`View button clicked for invoice ID: ${invoiceId}`);
+      window.location.href = `/view-invoice?id=${invoiceId}`;
     }
   </script>
 </body>

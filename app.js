@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const MySQLStore = require('express-mysql-session')(session); // Add MySQL session store
 const pool = require('./database'); // Database connection
 const billingRoutes = require('./routes/billingRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes'); // New route for invoice functionality
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use(billingRoutes);
+app.use(invoiceRoutes); // Use the invoice routes
 
 app.get('/', (req, res) => {
   console.log('Serving index.html');
@@ -130,6 +132,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Access dashboard
 app.get('/dashboard', (req, res) => {
   if (!req.session.userId) {
     console.log('Unauthorized access to dashboard. Redirecting to login.');
@@ -139,6 +142,7 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/dashboard.html'));
 });
 
+// Access Client Page
 app.get('/client-dashboard', (req, res) => {
   if (req.session.role !== 'client') {
     console.log('Unauthorized access to client dashboard. Redirecting to login.');
@@ -148,6 +152,7 @@ app.get('/client-dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/client-dashboard.html'));
 });
 
+// Create function
 app.get('/create', (req, res) => {
   if (!req.session.userId) {
     console.log('Unauthorized access to create page. Redirecting to login.');
@@ -157,6 +162,7 @@ app.get('/create', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/create.html'));
 });
 
+// Logout Function
 app.get('/logout', (req, res) => {
   console.log(`Logging out userId: ${req.session.userId}`);
   req.session.destroy(() => {
@@ -165,6 +171,7 @@ app.get('/logout', (req, res) => {
   });
 });
 
+// Edit Function
 app.get('/edit', (req, res) => {
   if (!req.session.userId) {
     console.log('Unauthorized access to edit page. Redirecting to login.');
@@ -172,6 +179,15 @@ app.get('/edit', (req, res) => {
   }
   console.log(`Serving edit.html for userId: ${req.session.userId}`);
   res.sendFile(path.join(__dirname, 'public/edit.html'));
+});
+
+app.get('/view-invoice', (req, res) => {
+  if (!req.session.userId) {
+    console.log('Unauthorized access to view invoice. Redirecting to login.');
+    return res.redirect('/login');
+  }
+  console.log(`Serving view_invoice.html for userId: ${req.session.userId}`);
+  res.sendFile(path.join(__dirname, 'public/view_invoice.html'));
 });
 
 // Start server
