@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+    <h1>Profile Settings</h1>
+    <a href="/dashboard">Back to Dashboard</a>
+
+    <div class="profile-form">
+        <h2>Update Profile</h2>
+        <div id="message"></div>
+
+        <form id="usernameForm">
+            <h3>Update Username</h3>
+            <div>
+                <label for="username">New Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <button type="submit">Update Username</button>
+        </form>
+
+        <form id="passwordForm">
+            <h3>Change Password</h3>
+            <div>
+                <label for="currentPassword">Current Password:</label>
+                <input type="password" id="currentPassword" name="currentPassword" required>
+            </div>
+            <div>
+                <label for="newPassword">New Password:</label>
+                <input type="password" id="newPassword" name="newPassword" required>
+            </div>
+            <div>
+                <label for="confirmPassword">Confirm New Password:</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required>
+            </div>
+            <button type="submit">Update Password</button>
+        </form>
+    </div>
+
+    <script>
+        const messageDiv = document.getElementById('message');
+
+        // Handle username update
+        document.getElementById('usernameForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/api/profile/username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    messageDiv.textContent = 'Username updated successfully';
+                    messageDiv.style.color = 'green';
+                } else {
+                    throw new Error(data.error || 'Failed to update username');
+                }
+            } catch (error) {
+                messageDiv.textContent = error.message;
+                messageDiv.style.color = 'red';
+            }
+        });
+
+        // Handle password update
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                messageDiv.textContent = 'New passwords do not match';
+                messageDiv.style.color = 'red';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/profile/password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        currentPassword: document.getElementById('currentPassword').value,
+                        newPassword: newPassword
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    messageDiv.textContent = 'Password updated successfully';
+                    messageDiv.style.color = 'green';
+                    document.getElementById('passwordForm').reset();
+                } else {
+                    throw new Error(data.error || 'Failed to update password');
+                }
+            } catch (error) {
+                messageDiv.textContent = error.message;
+                messageDiv.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>

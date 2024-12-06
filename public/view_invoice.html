@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Invoice</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .invoice-header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .invoice-header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 28px;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            margin: 30px 0;
+        }
+
+        .details-section h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .dates-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .status-unpaid {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .total-section {
+            text-align: right;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .total-amount {
+            font-size: 24px;
+            color: #0066cc;
+            font-weight: bold;
+        }
+
+        .button-group {
+            margin-top: 30px;
+            text-align: right;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background-color: #0066cc;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        @media print {
+            .btn {
+                display: none;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="invoice-header">
+            <h1>INVOICE</h1>
+            <p>Invoice #<span id="invoiceNumber"></span></p>
+        </div>
+
+        <div class="details-grid">
+            <div class="details-section">
+                <h3>Client:</h3>
+                <p id="clientName"></p>
+            </div>
+        </div>
+
+        <div class="dates-grid">
+            <div>
+                <div>Created Date</div>
+                <strong id="createdDate"></strong>
+            </div>
+            <div>
+                <div>Due Date</div>
+                <strong id="dueDate"></strong>
+            </div>
+            <div>
+                <div>Payment Terms</div>
+                <strong id="dueDays"></strong>
+            </div>
+            <div>
+                <div>Status</div>
+                <span id="status" class="status-badge"></span>
+            </div>
+        </div>
+
+        <div class="total-section">
+            <h3>Total Amount Due</h3>
+            <div class="total-amount">$<span id="totalAmount"></span></div>
+        </div>
+
+        <div class="button-group">
+            <button onclick="window.location.href='/dashboard'" class="btn btn-secondary">Back to Dashboard</button>
+            <button onclick="window.print()" class="btn btn-primary">Print Invoice</button>
+            <button onclick="viewPDF()" class="btn btn-primary">View PDF</button>
+        </div>
+    </div>
+
+    <script>
+        function viewPDF() {
+            window.open(window.pdfPath, '_blank');
+        }
+
+        async function loadInvoice() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const invoiceId = urlParams.get('id');
+                
+                if (!invoiceId) {
+                    alert('No invoice ID provided');
+                    return;
+                }
+
+                const response = await fetch(`/api/invoice/${invoiceId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Fill in invoice details
+                document.getElementById('invoiceNumber').textContent = data.invoice_number;
+                document.getElementById('clientName').textContent = data.client_name;
+                document.getElementById('createdDate').textContent = new Date(data.created_at).toLocaleDateString();
+                document.getElementById('dueDate').textContent = new Date(data.due_date).toLocaleDateString();
+                document.getElementById('dueDays').textContent = `${data.due_days} days`;
+                document.getElementById('totalAmount').textContent = parseFloat(data.total_amount).toFixed(2);
+
+                // Set status with appropriate styling
+                const statusElement = document.getElementById('status');
+                statusElement.textContent = data.status.toUpperCase();
+                statusElement.className = `status-badge status-${data.status.toLowerCase()}`;
+
+                // Store PDF path for the View PDF button
+                window.pdfPath = `/invoices/${data.user_id}/${data.client_id}/${data.pdf_path}`;
+
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+                alert('Error loading invoice details');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadInvoice);
+    </script>
+</body>
+</html>

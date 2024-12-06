@@ -7,8 +7,13 @@
   <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
-  <h1>Welcome, <span id="username">Loading...</span>!</h1>
-  <a href="/logout">Logout</a>
+  <div class="header-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <h1>Welcome, <span id="username">Loading...</span>!</h1>
+      <a href="/profile" class="button">Profile</a>
+    </div>
+    <a href="/logout" class="button">Logout</a>
+  </div>
 
   <h2>Your Billing Entries</h2>
   <button id="generate-invoice" onclick="redirectToGenerateInvoice()">Generate Invoice</button>
@@ -53,6 +58,20 @@
   <script>
     function redirectToGenerateInvoice() {
       window.location.href = '/generate-invoice';
+    }
+
+    // Load the username dynamically
+    async function loadUsername() {
+      try {
+        const response = await fetch('/api/user');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const data = await response.json();
+        document.getElementById('username').textContent = data.username || 'User';
+      } catch (err) {
+        console.error('Error loading username:', err);
+        document.getElementById('username').textContent = 'Error loading user';
+      }
     }
 
     async function loadEntries() {
@@ -113,7 +132,8 @@
             <td>${invoice.due_days} days</td>
             <td>${invoice.status || 'unpaid'}</td>
             <td>
-              <a href="/invoices/${invoice.user_id}/${invoice.client_id}/${invoice.pdf_path}" target="_blank">View PDF</a>
+              <a href="/view_invoice.html?id=${invoice.id}" class="btn btn-primary">View Details</a>
+              <a href="/invoices/${invoice.user_id}/${invoice.client_id}/${invoice.pdf_path}" target="_blank" class="btn btn-secondary">View PDF</a>
             </td>
           `;
           invoicesTable.appendChild(row);
@@ -125,8 +145,9 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      loadEntries();
-      loadInvoices();
+      loadUsername(); // Load username
+      loadEntries(); // Load billing entries
+      loadInvoices(); // Load invoices
     });
   </script>
 </body>

@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Secure static file serving for invoices - requires authentication
 app.use('/invoices', (req, res, next) => {
-  if (!req.session.userId) {
+  if (!req.session || !req.session.userId) {
     return res.status(401).send('Unauthorized');
   }
   next();
@@ -199,6 +199,94 @@ app.get('/view-invoice', (req, res) => {
   }
   console.log(`Serving view_invoice.html for userId: ${req.session.userId}`);
   res.sendFile(path.join(__dirname, 'public/view_invoice.html'));
+});
+
+// Profile route
+app.get('/profile', (req, res) => {
+  if (!req.session.userId) {
+    console.log('Unauthorized access to profile page. Redirecting to login.');
+    return res.redirect('/login');
+  }
+  console.log(`Serving profile.html for userId: ${req.session.userId}`);
+  res.sendFile(path.join(__dirname, 'public/profile.html'));
+});
+
+// API route to update username
+app.post('/api/profile/username', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { username } = req.body;
+
+  try {
+    // Check if username already exists
+    const [existing] = await pool.query(
+      'SELECT id FROM users WHERE username = ? AND id != ?',
+      [username, req.session.userId]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    // Update username
+    await pool.query(
+      'UPDATE users SET username = ? WHERE id = ?',
+      [username, req.session.userId]
+    );
+
+    // Update session
+    req.session.username = username;
+
+    res.json({ message: 'Username updated successfully' });
+  } catch (error) {
+    console.error('Error updating username:', error);
+    res.status(500).json({ error: 'Error updating username' });
+  }
+});
+
+// API route to update password
+app.post('/api/profile/password', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    // Get current user
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE id = ?',
+      [req.session.userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = users[0];
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await pool.query(
+      'UPDATE users SET password = ? WHERE id = ?',
+      [hashedPassword, req.session.userId]
+    );
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ error: 'Error updating password' });
+  }
 });
 
 // Secure route for serving invoice PDFs
