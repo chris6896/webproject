@@ -1,125 +1,210 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generate Invoice</title>
-  <link rel="stylesheet" href="./css/styles.css">
+    <title>Generate Invoice</title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <h1>Generate Invoice</h1>
-  <a href="/dashboard">Back to Dashboard</a>
-  <form id="generate-invoice-form">
-    <label for="client">Select Client:</label>
-    <select id="client" name="clientId" required>
-      <option value="">Loading clients...</option>
-    </select>
-
-    <label for="dueDays">Due Days:</label>
-    <input type="number" id="dueDays" name="dueDays" min="1" placeholder="Enter Due Days" required />
-
-    <label for="lineItems">Line Items:</label>
-    <div id="lineItems">
-      <div class="line-item">
-        <input type="text" name="description[]" placeholder="Description" required />
-        <input type="number" name="quantity[]" placeholder="Quantity" min="1" required />
-        <input type="number" name="rate[]" placeholder="Rate" step="0.01" required />
-        <span class="amount">Amount: $0.00</span>
-        <button type="button" class="remove-line-item">Remove</button>
-      </div>
+    <div class="container">
+        <h1>Generate Invoice</h1>
+        <form id="invoiceForm">
+            <div class="form-group">
+                <label for="clientId">Select Client:</label>
+                <select id="clientId" name="clientId" required></select>
+            </div>
+            <div class="form-group">
+                <label for="dueDays">Due Days:</label>
+                <input type="number" id="dueDays" name="dueDays" required>
+            </div>
+            
+            <div id="itemsContainer">
+                <div class="item-row">
+                    <h3>Line Items</h3>
+                    <div class="form-group">
+                        <label>Select from Billing Entries:</label>
+                        <select class="billing-entry-select">
+                            <option value="">-- Select Existing Entry --</option>
+                        </select>
+                    </div>
+                    <div class="line-items">
+                        <div class="form-group">
+                            <label>Service/Product:</label>
+                            <input type="text" name="items[0][service_product]" class="service-product" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity:</label>
+                            <input type="number" name="items[0][quantity]" class="quantity" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Rate:</label>
+                            <input type="number" step="0.01" name="items[0][rate]" class="rate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Description:</label>
+                            <textarea name="items[0][description]" class="description"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" id="addItem">Add Another Item</button>
+            <button type="submit">Generate Invoice</button>
+        </form>
     </div>
-    <button type="button" id="addLineItem">+ Line Item</button>
 
-    <label for="notes">Notes:</label>
-    <textarea id="notes" name="notes" placeholder="Optional notes"></textarea>
+    <script src="/js/validation.js"></script>
+    <script>
+        let itemCount = 1;
 
-    <label for="terms">Terms:</label>
-    <textarea id="terms" name="terms" placeholder="Terms and conditions"></textarea>
-
-    <button type="submit">Generate Invoice</button>
-  </form>
-
-  <script>
-    // Load client list
-    async function loadClients() {
-      const clientDropdown = document.getElementById('client');
-      try {
-        const response = await fetch('/api/clients');
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        
-        const data = await response.json();
-        clientDropdown.innerHTML = ''; // Clear previous options
-        if (!data.clients || data.clients.length === 0) {
-          clientDropdown.innerHTML = '<option value="">No clients available</option>';
-          return;
+        // Fetch clients for dropdown
+        async function loadClients() {
+            const response = await fetch('/api/clients');
+            const data = await response.json();
+            const select = document.getElementById('clientId');
+            data.clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = client.username;
+                select.appendChild(option);
+            });
         }
-        data.clients.forEach(client => {
-          const option = document.createElement('option');
-          option.value = client.id;
-          option.textContent = client.username;
-          clientDropdown.appendChild(option);
-        });
-      } catch (error) {
-        console.error('Error loading clients:', error);
-        clientDropdown.innerHTML = '<option value="">Error loading clients</option>';
-      }
-    }
 
-    // Add line item
-    document.getElementById('addLineItem').addEventListener('click', () => {
-      const lineItems = document.getElementById('lineItems');
-      const newItem = document.createElement('div');
-      newItem.className = 'line-item';
-      newItem.innerHTML = `
-        <input type="text" name="description[]" placeholder="Description" required />
-        <input type="number" name="quantity[]" placeholder="Quantity" min="1" required />
-        <input type="number" name="rate[]" placeholder="Rate" step="0.01" required />
-        <span class="amount">Amount: $0.00</span>
-        <button type="button" class="remove-line-item">Remove</button>
-      `;
-      newItem.querySelector('.remove-line-item').addEventListener('click', () => newItem.remove());
-      lineItems.appendChild(newItem);
-    });
-
-    // Handle form submission
-    document.getElementById('generate-invoice-form').addEventListener('submit', async (event) => {
-      event.preventDefault();
-
-      const formData = new FormData(event.target);
-      const payload = {
-        clientId: formData.get('clientId'),
-        dueDays: formData.get('dueDays'),
-        notes: formData.get('notes'),
-        terms: formData.get('terms'),
-        items: Array.from(document.querySelectorAll('.line-item')).map(item => ({
-          description: item.querySelector('input[name="description[]"]').value,
-          quantity: item.querySelector('input[name="quantity[]"]').value,
-          rate: item.querySelector('input[name="rate[]"]').value,
-        })),
-      };
-
-      try {
-        const response = await fetch('/api/generate-invoice', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (response.ok) {
-          alert('Invoice generated successfully!');
-          window.location.href = '/dashboard';
-        } else {
-          const error = await response.text();
-          alert(`Failed to generate invoice: ${error}`);
+        // Fetch billing entries for dropdowns
+        async function loadBillingEntries() {
+            const response = await fetch('/api/entries');
+            const data = await response.json();
+            const entries = data.entries;
+            
+            // Update all billing entry selects
+            document.querySelectorAll('.billing-entry-select').forEach(select => {
+                select.innerHTML = '<option value="">-- Select Existing Entry --</option>';
+                entries.forEach(entry => {
+                    const option = document.createElement('option');
+                    option.value = entry.id;
+                    option.textContent = `${entry.service_product} - Qty: ${entry.quantity} - Rate: $${entry.rate}`;
+                    select.appendChild(option);
+                });
+            });
         }
-      } catch (error) {
-        console.error('Error generating invoice:', error);
-        alert('Failed to generate invoice.');
-      }
-    });
 
-    // Initialize page
-    document.addEventListener('DOMContentLoaded', loadClients);
-  </script>
+        // Handle billing entry selection
+        function handleEntrySelection(select) {
+            const selectedValue = select.value;
+            if (!selectedValue) return;
+
+            fetch(`/api/entry/${selectedValue}`)
+                .then(response => response.json())
+                .then(entry => {
+                    const row = select.closest('.item-row');
+                    row.querySelector('.service-product').value = entry.service_product;
+                    row.querySelector('.quantity').value = entry.quantity;
+                    row.querySelector('.rate').value = entry.rate;
+                    row.querySelector('.description').value = entry.description || '';
+                });
+        }
+
+        // Add new line item
+        document.getElementById('addItem').addEventListener('click', () => {
+            const container = document.getElementById('itemsContainer');
+            const newRow = document.createElement('div');
+            newRow.className = 'item-row';
+            newRow.innerHTML = `
+                <div class="form-group">
+                    <label>Select from Billing Entries:</label>
+                    <select class="billing-entry-select">
+                        <option value="">-- Select Existing Entry --</option>
+                    </select>
+                </div>
+                <div class="line-items">
+                    <div class="form-group">
+                        <label>Service/Product:</label>
+                        <input type="text" name="items[${itemCount}][service_product]" class="service-product" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity:</label>
+                        <input type="number" name="items[${itemCount}][quantity]" class="quantity" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate:</label>
+                        <input type="number" step="0.01" name="items[${itemCount}][rate]" class="rate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <textarea name="items[${itemCount}][description]" class="description"></textarea>
+                    </div>
+                </div>
+                <button type="button" class="remove-item">Remove Item</button>
+            `;
+            container.appendChild(newRow);
+            itemCount++;
+            
+            // Populate the new select with billing entries
+            loadBillingEntries();
+
+            // Add event listener to new billing entry select
+            newRow.querySelector('.billing-entry-select').addEventListener('change', function() {
+                handleEntrySelection(this);
+            });
+        });
+
+        // Remove line item
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-item')) {
+                e.target.closest('.item-row').remove();
+            }
+        });
+
+        // Form submission
+        document.getElementById('invoiceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const items = [];
+            
+            document.querySelectorAll('.item-row').forEach((row, index) => {
+                items.push({
+                    service_product: row.querySelector('.service-product').value,
+                    quantity: row.querySelector('.quantity').value,
+                    rate: row.querySelector('.rate').value,
+                    description: row.querySelector('.description').value
+                });
+            });
+
+            const data = {
+                clientId: formData.get('clientId'),
+                dueDays: formData.get('dueDays'),
+                items: items
+            };
+
+            try {
+                const response = await fetch('/api/generate-invoice', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('Error generating invoice');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error generating invoice');
+            }
+        });
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            loadClients();
+            loadBillingEntries();
+            
+            // Add event listener to initial billing entry select
+            document.querySelector('.billing-entry-select').addEventListener('change', function() {
+                handleEntrySelection(this);
+            });
+        });
+    </script>
 </body>
 </html>
