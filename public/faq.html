@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ & Tutorial</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .section h3 {
+            color: #0066cc;
+            margin-top: 20px;
+        }
+
+        .step {
+            margin-bottom: 15px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .step:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #0066cc;
+        }
+
+        .tip {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #0066cc;
+            margin: 15px 0;
+        }
+
+        .role-specific {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f0f4f8;
+            border-radius: 4px;
+        }
+
+        .button-group {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="faq-container">
+        <h1>Billing System Tutorial & FAQ</h1>
+
+        <div class="section">
+            <h2>Getting Started</h2>
+            <div class="step">First, sign up for an account by selecting your role (Business or Client).</div>
+            <div class="step">Log in with your credentials to access your dashboard.</div>
+            <div class="tip">Tip: Make sure to remember which role you selected, as it determines your available features.</div>
+        </div>
+
+        <div class="section">
+            <h2>For Business Users</h2>
+            <h3>Managing Billing Entries</h3>
+            <div class="step">Click "Add New Entry" to create billing entries for services or products.</div>
+            <div class="step">Fill in the service name, quantity, rate, and optional description.</div>
+            <div class="step">Entries can be edited or deleted later if needed.</div>
+
+            <h3>Creating Invoices</h3>
+            <div class="step">Click "Generate Invoice" to create a new invoice.</div>
+            <div class="step">Select a client from the dropdown menu.</div>
+            <div class="step">Set the payment terms (due days).</div>
+            <div class="step">Add items either manually or select from your existing billing entries.</div>
+            <div class="step">Review and generate the invoice - a PDF will be created automatically.</div>
+
+            <div class="tip">Tip: You can view all generated invoices in your dashboard and track their status.</div>
+        </div>
+
+        <div class="section">
+            <h2>For Clients</h2>
+            <div class="step">View all invoices assigned to you in your client dashboard.</div>
+            <div class="step">Download or view invoice PDFs directly from the dashboard.</div>
+            <div class="step">Track payment status and due dates for each invoice.</div>
+            
+            <div class="tip">Tip: Keep track of your invoice due dates to ensure timely payments.</div>
+        </div>
+
+        <div class="section">
+            <h2>Profile Management</h2>
+            <div class="step">Access your profile settings by clicking "Profile" in the dashboard.</div>
+            <div class="step">Update your username if needed.</div>
+            <div class="step">Change your password for security purposes.</div>
+        </div>
+
+        <div class="section">
+            <h2>Common Questions</h2>
+            <h3>How do I view invoice details?</h3>
+            <p>Click the "View Details" button next to any invoice to see complete information including client details, amounts, and due dates.</p>
+
+            <h3>Can I modify an invoice after creation?</h3>
+            <p>Once an invoice is generated, it cannot be modified. You'll need to create a new invoice if changes are needed.</p>
+
+            <h3>How do I handle payments?</h3>
+            <p>Currently, the system tracks invoice status but does not process payments. Payment processing should be handled outside the system.</p>
+        </div>
+
+        <div class="button-group">
+            <a href="/dashboard" class="btn">Back to Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>

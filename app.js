@@ -288,6 +288,10 @@ app.post('/api/profile/password', async (req, res) => {
     res.status(500).json({ error: 'Error updating password' });
   }
 });
+app.get('/faq', (req, res) => {
+  console.log('Serving faq.html');
+  res.sendFile(path.join(__dirname, 'public/faq.html'));
+});
 
 // Secure route for serving invoice PDFs
 app.get('/api/invoices/:userId/:clientId/:filename', async (req, res) => {
